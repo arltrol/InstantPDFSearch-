@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>InstantPDFSearch 📄🔍</title>
+  <style>
+    body { font-family: sans-serif; padding: 2rem; background: #f5f7fa; }
+    h1 { font-size: 2em; text-align: center; }
+    .uploader { margin-top: 2rem; text-align: center; }
+    .results { margin-top: 2rem; }
+    .snippet { background: #fff; padding: 1rem; margin-bottom: 1rem; border-radius: 6px; box-shadow: 0 0 5px rgba(0,0,0,0.1); }
+    .highlight { background: yellow; font-weight: bold; }
+    .status { margin-top: 1rem; text-align: center; font-size: 1.1rem; color: #444; }
+    input[type="file"] { display: block; margin: 1rem auto; }
+    input[type="text"] { padding: 0.5rem; width: 80%; margin: 1rem auto; display: block; }
+  </style>
+</head>
+<body>
+  <h1>InstantPDFSearch 📄🔍</h1>
+  <div class="uploader">
+    <input type="file" id="pdfFile" accept="application/pdf" />
+    <input type="text" id="pdfUrl" placeholder="Paste PDF URL here..." />
+    <button onclick="handlePDF()">🚀 Scan PDF</button>
+    <div class="status" id="status"></div>
+  </div>
+  <div id="searchArea" style="display:none;">
+    <input type="text" id="searchInput" placeholder="Enter keyword to search..." oninput="searchInText()" />
+  </div>
+  <div class="results" id="results"></div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script>
+    const ENABLE_LOGGING = true; // 👁️ Set to false to disable logging
+    let fullText = "";
+
+    function log(...args) {
+      if (ENABLE_LOGGING) console.log(...args);
+    }
+
+    async function handlePDF() {
+      const file = document.getElementById('pdfFile').files[0];
+      const url = document.getElementById('pdfUrl').value.trim();
+      const status = document.getElementById('status');
+      const results = document.getElementById('results');
+      results.innerHTML = '';
+      fullText = '';
+      status.textContent = '📥 Loading PDF...';
+
+      try {
+        let loadingTask;
+
+        if (file) {
+          if (file.size > 50 * 1024 * 1024) {
+            alert("File exceeds 50MB limit.");
+            return;
+          }
+          const reader = new FileReader();
+          reader.onload = async (e) => {
+            const typedarray = new Uint8Array(e.target.result);
+            await processPDF(typedarray);
+          };
+          reader.readAsArrayBuffer(file);
+        } else if (url) {
+          if (url.endsWith('.pdf')) {
+            loadingTask = pdfjsLib.getDocument(url);
+            const pdf = await loadingTask.promise;
+            await extractTextFromPDF(pdf);
+          } else {
+            alert("❌ URL must end with .pdf for now (JS links not yet supported in MVP)");
+            return;
+          }
+        } else {
+          alert("Please upload a file or paste a PDF URL.");
+        }
+      } catch (err) {
+        log("Error processing PDF:", err);
+        status.textContent = '❌ Error loading PDF.';
+      }
+    }
+
+    async function processPDF(typedarray) {
+      const status = document.getElementById('status');
+      const pdf = await pdfjsLib.getDocument({ data: typedarray }).promise;
+      await extractTextFromPDF(pdf);
+    }
+
+    async function extractTextFromPDF(pdf) {
+      const status = document.getElementById('status');
+      fullText = "";
+
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const content = await page.getTextContent();
+        const pageText = content.items.map(item => item.str).join(' ');
+        fullText += `\n[PAGE ${i}]\n` + pageText;
+        status.textContent = `👀 Reading page ${i} of ${pdf.numPages}...`;
+      }
+
+      document.getElementById('searchArea').style.display = 'block';
+      status.textContent = `✅ Done reading ${pdf.numPages} pages.`;
+      log("Extracted text:", fullText.substring(0, 300));
+    }
+
+    function searchInText() {
+      const query = document.getElementById('searchInput').value.trim();
+      const results = document.getElementById('results');
+      results.innerHTML = '';
+      if (!query) return;
+
+      const regex = new RegExp(`(.{0,80})(${query})(.{0,80})`, 'gi');
+      let match;
+      const snippets = [];
+
+      while ((match = regex.exec(fullText)) !== null) {
+        const before = match[1];
+        const keyword = match[2];
+        const after = match[3];
+        const pageMatch = fullText.lastIndexOf("[PAGE ", match.index);
+        const pageLabel = fullText.substring(pageMatch, fullText.indexOf("\n", pageMatch));
+
+        snippets.push(`<div class='snippet'><strong>${pageLabel}</strong><br>${before}<span class='highlight'>${keyword}</span>${after}</div>`);
+      }
+
+      if (snippets.length === 0) {
+        results.innerHTML = "<p>No results found.</p>";
+      } else {
+        results.innerHTML = `<p>🔍 Found ${snippets.length} match(es):</p>` + snippets.join('');
+      }
+    }
+  </script>
+</body>
+</html>
