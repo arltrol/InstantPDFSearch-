@@ -38,46 +38,51 @@
       if (ENABLE_LOGGING) console.log(...args);
     }
 
-    async function handlePDF() {
-      const file = document.getElementById('pdfFile').files[0];
-      const url = document.getElementById('pdfUrl').value.trim();
-      const status = document.getElementById('status');
-      const results = document.getElementById('results');
-      results.innerHTML = '';
-      fullText = '';
-      status.textContent = '📥 Loading PDF...';
+   async function handlePDF() {
+  const file = document.getElementById('pdfFile').files[0];
+  const url = document.getElementById('pdfUrl').value.trim();
+  const status = document.getElementById('status');
+  const results = document.getElementById('results');
+  results.innerHTML = '';
+  fullText = '';
+  status.textContent = '📥 Loading PDF...';
 
-      try {
-        let loadingTask;
+  try {
+    let loadingTask;
 
-        if (file) {
-          if (file.size > 50 * 1024 * 1024) {
-            alert("File exceeds 50MB limit.");
-            return;
-          }
-          const reader = new FileReader();
-          reader.onload = async (e) => {
-            const typedarray = new Uint8Array(e.target.result);
-            await processPDF(typedarray);
-          };
-          reader.readAsArrayBuffer(file);
-        } else if (url) {
-         if (url.endsWith('.pdf') || url.endsWith('.ashx')) {
-            loadingTask = pdfjsLib.getDocument(url);
-            const pdf = await loadingTask.promise;
-            await extractTextFromPDF(pdf);
-          } else {
-            alert("❌ URL must end with .pdf for now (JS links not yet supported in MVP)");
-            return;
-          }
-        } else {
-          alert("Please upload a file or paste a PDF URL.");
-        }
-      } catch (err) {
-        log("Error processing PDF:", err);
-        status.textContent = '❌ Error loading PDF.';
+    if (file) {
+      if (file.size > 50 * 1024 * 1024) {
+        alert("File exceeds 50MB limit.");
+        return;
       }
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        const typedarray = new Uint8Array(e.target.result);
+        await processPDF(typedarray);
+      };
+      reader.readAsArrayBuffer(file);
+    } else if (url) {
+      let proxyUrl = url;
+
+      // Wake-up notice for Render cold start
+      if (!url.endsWith('.pdf')) {
+        status.textContent = '⏳ Waking up the PDF server… this may take ~20–30 seconds.';
+        proxyUrl = `https://instantpdfsearch.onrender.com/api/fetchpdf?url=${encodeURIComponent(url)}`;
+      }
+
+      loadingTask = pdfjsLib.getDocument(proxyUrl);
+      const pdf = await loadingTask.promise;
+      await extractTextFromPDF(pdf);
+    } else {
+      alert("Please upload a file or paste a PDF URL.");
     }
+  } catch (err) {
+    log("Error processing PDF:", err);
+    status.textContent = '❌ Error loading PDF.';
+  }
+}
+
+
 
     async function processPDF(typedarray) {
       const status = document.getElementById('status');
