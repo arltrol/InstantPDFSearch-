@@ -24,10 +24,12 @@ app.get('/api/fetchpdf', async (req, res) => {
     const page = await browser.newPage();
     await page.goto(targetUrl, { waitUntil: 'networkidle2' });
 
-    const pdfUrl = await page.evaluate(() => {
-      const link = document.querySelector('a[href$=".pdf"]');
-      return link ? link.href : null;
-    });
+  const pdfUrl = await page.evaluate(() => {
+  const link = document.querySelector('a[href$=".pdf"]')?.href;
+  const iframe = document.querySelector('iframe[src$=".pdf"]')?.src;
+  return link || iframe || null;
+});
+
 
     await browser.close();
 
