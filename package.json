@@ -4,15 +4,13 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "start": "node index.js"
+    "start": "node index.js",
+    "postinstall": "echo Skipping Chromium download on Render"
   },
   "dependencies": {
     "express": "^4.18.2",
-    "puppeteer": "^21.3.8"
-  },
-  "scripts": {
-  "start": "node index.js",
-  "postinstall": "echo Skipping Chromium download on Render"
-}
-
+    "chrome-aws-lambda": "^10.1.0",
+    "puppeteer-core": "^21.3.8",
+    "node-fetch": "^3.3.2"
+  }
 }
