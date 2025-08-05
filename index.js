@@ -1,6 +1,10 @@
 import express from 'express';
-import axios from 'axios';
+import { exec } from 'child_process';
+import { promisify } from 'util';
+import fs from 'fs';
+import path from 'path';
 
+const execAsync = promisify(exec);
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -12,31 +16,35 @@ app.get('/api/fetchpdf', async (req, res) => {
   }
 
   try {
-    console.log(`📡 Proxying PDF from: ${targetUrl}`);
+    const filename = `/tmp/fetched-${Date.now()}.pdf`;
+    const command = `curl -L "${targetUrl}" --output "${filename}" --silent --show-error --fail`;
 
-   const pdfRes = await axios.get(targetUrl, {
-  responseType: 'stream',
-  timeout: 30000, // <-- ADD THIS
-  headers: {
-    'User-Agent': 'Mozilla/5.0',
-    'Accept': 'application/pdf'
-  }
-});
+    console.log(`📡 Fetching via curl: ${targetUrl}`);
+    await execAsync(command);
 
+    if (!fs.existsSync(filename)) {
+      return res.status(500).send('❌ File not downloaded');
+    }
 
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Access-Control-Allow-Origin', '*');
-    pdfRes.data.pipe(res);
+
+    const stream = fs.createReadStream(filename);
+    stream.pipe(res);
+
+    stream.on('close', () => {
+      fs.unlink(filename, () => {}); // cleanup
+    });
   } catch (err) {
-    console.error('❌ Proxy error:', err.message);
-    res.status(500).send('❌ Error fetching PDF');
+    console.error('❌ Curl error:', err.message);
+    res.status(500).send('❌ Error fetching PDF via curl');
   }
 });
 
 app.get('/', (req, res) => {
-  res.send('📄 PDF Proxy is running');
+  res.send('📄 PDF Proxy (via curl) is running');
 });
 
 app.listen(PORT, () => {
-  console.log(`🚀 Proxy server running on port ${PORT}`);
+  console.log(`🚀 Curl proxy server running on port ${PORT}`);
 });
