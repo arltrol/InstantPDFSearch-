@@ -38,7 +38,7 @@
       if (ENABLE_LOGGING) console.log(...args);
     }
 
-   async function handlePDF() {
+  async function handlePDF() {
   const file = document.getElementById('pdfFile').files[0];
   const url = document.getElementById('pdfUrl').value.trim();
   const status = document.getElementById('status');
@@ -78,9 +78,25 @@
     }
   } catch (err) {
     log("Error processing PDF:", err);
-    status.textContent = '❌ Error loading PDF.';
+
+    if (err?.message?.includes("Unexpected server response (404)") || err?.status === 404) {
+      if (url.endsWith('.ashx')) {
+        status.textContent = '❌ Could not fetch .ashx file (404). Double-check the IMF URL for typos.';
+      } else {
+        status.textContent = '❌ PDF not found (404). Please check the URL.';
+      }
+    } else if (err?.message?.includes("Failed to fetch") || err?.message?.includes("NetworkError")) {
+      status.textContent = '❌ Network error. Please check your internet connection.';
+    } else if (err?.message?.includes("timeout")) {
+      status.textContent = '❌ Request timed out. The server may be waking up or the URL may be unreachable.';
+    } else if (err?.message?.includes("Invalid PDF structure")) {
+      status.textContent = '❌ This file is not a valid PDF.';
+    } else {
+      status.textContent = `❌ Error: ${err?.message || 'Unknown error'}`;
+    }
   }
 }
+
 
 
 
