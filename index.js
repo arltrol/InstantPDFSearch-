@@ -37,11 +37,23 @@ app.get('/api/fetchpdf', async (req, res) => {
       return res.status(404).send('❌ No .pdf link found on page');
     }
 
-    const pdfRes = await fetch(pdfUrl);
-    if (!pdfRes.ok) throw new Error('Failed to fetch PDF');
+   import axios from 'axios';
 
-    res.setHeader('Content-Type', 'application/pdf');
-    pdfRes.body.pipe(res);
+try {
+  const pdfRes = await axios.get(pdfUrl, {
+    responseType: 'stream',
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'
+    }
+  });
+
+  res.setHeader('Content-Type', 'application/pdf');
+  pdfRes.data.pipe(res);
+} catch (err) {
+  console.error('❌ Error downloading PDF:', err.message);
+  return res.status(500).send('❌ Error fetching PDF stream');
+}
+
   } catch (err) {
     console.error(err);
     res.status(500).send('❌ Error fetching PDF');
