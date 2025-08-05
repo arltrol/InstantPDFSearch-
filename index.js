@@ -14,13 +14,15 @@ app.get('/api/fetchpdf', async (req, res) => {
   try {
     console.log(`📡 Proxying PDF from: ${targetUrl}`);
 
-    const pdfRes = await axios.get(targetUrl, {
-      responseType: 'stream',
-      headers: {
-        'User-Agent': 'Mozilla/5.0',
-        'Accept': 'application/pdf'
-      }
-    });
+   const pdfRes = await axios.get(targetUrl, {
+  responseType: 'stream',
+  timeout: 30000, // <-- ADD THIS
+  headers: {
+    'User-Agent': 'Mozilla/5.0',
+    'Accept': 'application/pdf'
+  }
+});
+
 
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Access-Control-Allow-Origin', '*');
