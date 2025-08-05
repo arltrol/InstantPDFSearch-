@@ -4,12 +4,10 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "start": "node index.js",
-    "postinstall": "node node_modules/puppeteer/install.js && echo ✅ Puppeteer install complete"
+    "start": "node index.js"
   },
   "dependencies": {
     "express": "^4.18.2",
-    "puppeteer": "19.11.1",
     "axios": "^1.6.0"
   }
 }
