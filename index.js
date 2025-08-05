@@ -13,11 +13,12 @@ app.get('/api/fetchpdf', async (req, res) => {
   }
 
   try {
-    console.log('Launching headless browser...');
     const browser = await puppeteer.launch({
-      headless: "new",
-      args: ['--no-sandbox', '--disable-setuid-sandbox']
-    });
+  headless: "new",
+  args: ['--no-sandbox', '--disable-setuid-sandbox'],
+  executablePath: process.env.CHROMIUM_PATH || undefined
+});
+
 
     const page = await browser.newPage();
     await page.goto(targetUrl, { waitUntil: 'networkidle2' });
