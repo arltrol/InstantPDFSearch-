@@ -14,24 +14,33 @@ app.get('/api/fetchpdf', async (req, res) => {
 
   try {
     console.log(`🌐 Visiting target: ${targetUrl}`);
-    const browser = await puppeteer.launch({
-      headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox']
-    });
 
-    const page = await browser.newPage();
-    await page.goto(targetUrl, { waitUntil: 'networkidle2' });
+    // Bypass Puppeteer for direct PDF/ashx links
+    let pdfUrl;
+    if (targetUrl.endsWith('.pdf') || targetUrl.endsWith('.ashx')) {
+      pdfUrl = targetUrl;
+    } else {
+      // Use Puppeteer to scrape PDF link from HTML page
+      const browser = await puppeteer.launch({
+        headless: true,
+        args: ['--no-sandbox', '--disable-setuid-sandbox']
+      });
 
-    const pdfUrl = await page.evaluate(() => {
-      const link = document.querySelector('a[href$=".pdf"]')?.href;
-      const iframe = document.querySelector('iframe[src$=".pdf"]')?.src;
-      const meta = document.querySelector('meta[http-equiv="refresh"]')?.content;
-      const metaMatch = meta?.match(/url=(.*\.pdf)/i);
-      return link || iframe || (metaMatch ? metaMatch[1] : null);
-    });
+      const page = await browser.newPage();
+      await page.goto(targetUrl, { waitUntil: 'networkidle2' });
+
+      pdfUrl = await page.evaluate(() => {
+        const link = document.querySelector('a[href$=".pdf"]')?.href;
+        const iframe = document.querySelector('iframe[src$=".pdf"]')?.src;
+        const meta = document.querySelector('meta[http-equiv="refresh"]')?.content;
+        const metaMatch = meta?.match(/url=(.*\.pdf)/i);
+        return link || iframe || (metaMatch ? metaMatch[1] : null);
+      });
+
+      await browser.close();
+    }
 
     console.log(`📎 Detected PDF URL: ${pdfUrl}`);
-    await browser.close();
 
     if (!pdfUrl) {
       return res.status(404).send('❌ No .pdf link found on page');
@@ -40,14 +49,14 @@ app.get('/api/fetchpdf', async (req, res) => {
     const pdfRes = await axios.get(pdfUrl, {
       responseType: 'stream',
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'
+        'User-Agent': 'Mozilla/5.0'
       }
     });
 
     res.setHeader('Content-Type', 'application/pdf');
     pdfRes.data.pipe(res);
   } catch (err) {
-    console.error('❌ Error:', err.message);
+    console.error('❌ Error fetching PDF:', err.message);
     res.status(500).send('❌ Error fetching PDF');
   }
 });
