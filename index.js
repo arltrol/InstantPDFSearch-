@@ -1,6 +1,7 @@
 import express from 'express';
-import puppeteer from 'puppeteer';
 import fetch from 'node-fetch';
+import chromium from 'chrome-aws-lambda';
+import puppeteer from 'puppeteer-core';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -14,16 +15,15 @@ app.get('/api/fetchpdf', async (req, res) => {
 
   try {
     const browser = await puppeteer.launch({
-  headless: "new",
-  args: ['--no-sandbox', '--disable-setuid-sandbox'],
-  executablePath: process.env.CHROMIUM_PATH || undefined
-});
-
+      args: chromium.args,
+      defaultViewport: chromium.defaultViewport,
+      executablePath: await chromium.executablePath,
+      headless: chromium.headless
+    });
 
     const page = await browser.newPage();
     await page.goto(targetUrl, { waitUntil: 'networkidle2' });
 
-    // Find PDF download link
     const pdfUrl = await page.evaluate(() => {
       const link = document.querySelector('a[href$=".pdf"]');
       return link ? link.href : null;
@@ -35,7 +35,6 @@ app.get('/api/fetchpdf', async (req, res) => {
       return res.status(404).send('❌ No .pdf link found on page');
     }
 
-    console.log('Fetching real PDF from:', pdfUrl);
     const pdfRes = await fetch(pdfUrl);
     if (!pdfRes.ok) throw new Error('Failed to fetch PDF');
 
