@@ -62,7 +62,7 @@
           };
           reader.readAsArrayBuffer(file);
         } else if (url) {
-          if (url.endsWith('.pdf')) {
+         if (url.endsWith('.pdf') || url.endsWith('.ashx')) {
             loadingTask = pdfjsLib.getDocument(url);
             const pdf = await loadingTask.promise;
             await extractTextFromPDF(pdf);
