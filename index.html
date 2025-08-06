@@ -44,9 +44,10 @@
   </div>
 
  <div id="contextSliderWrapper" style="display: none; margin: 1rem auto; text-align: center;">
-  <label for="contextSlider"><strong>Expand context (lines):</strong></label>
-  <input type="range" id="contextSlider" min="0" max="20" value="0" step="1" oninput="updateContextLines(this.value)">
-  <span id="contextValue">0</span> lines
+  <label for="contextSlider"><strong>Expand context (characters):</strong></label>
+ <input type="range" id="contextSlider" min="0" max="400" step="80" value="0" oninput="updateContextChars(this.value)">
+<span id="contextValue">0</span> characters
+
 
   <span id="exactMatchWrapper" style="display:none; margin-left: 2rem;">
     <label><input type="checkbox" id="exactMatch" onchange="searchInText()" /> Match exact words only</label>
@@ -65,11 +66,11 @@
       if (ENABLE_LOGGING) console.log(...args);
     }
 
-  function updateContextLines(value) {
-  contextLines = parseInt(value, 10);
-  document.getElementById("contextValue").textContent = contextLines;
-  searchInText(); // re-render with new context
+function updateContextChars(value) {
+  document.getElementById("contextValue").textContent = value;
+  searchInText();
 }
+
 
   async function handlePDF() {
   const file = document.getElementById('pdfFile').files[0];
@@ -189,45 +190,24 @@ function searchInText() {
 
   const snippets = [];
 
-  if (contextLines === 0) {
-    // === DEFAULT: character context
-    const regex = exactMatch
-      ? new RegExp(`(.{0,80})\\b(${safeQuery})\\b(.{0,80})`, 'gi')
-      : new RegExp(`(.{0,80})(${safeQuery})(.{0,80})`, 'gi');
+const contextChars = parseInt(document.getElementById("contextSlider").value, 10);
 
-    let match;
-    while ((match = regex.exec(fullText)) !== null) {
-      const before = match[1];
-      const keyword = match[2];
-      const after = match[3];
+const regex = exactMatch
+  ? new RegExp(`(.{0,${contextChars}})\\b(${safeQuery})\\b(.{0,${contextChars}})`, 'gi')
+  : new RegExp(`(.{0,${contextChars}})(${safeQuery})(.{0,${contextChars}})`, 'gi');
 
-      const pageMatch = fullText.lastIndexOf("[PAGE ", match.index);
-      const pageLabel = fullText.substring(pageMatch, fullText.indexOf("\n", pageMatch));
+let match;
+while ((match = regex.exec(fullText)) !== null) {
+  const before = match[1];
+  const keyword = match[2];
+  const after = match[3];
 
-      snippets.push(`<div class='snippet'><strong>${pageLabel}</strong><br>${before}<span class='highlight'>${keyword}</span>${after}</div>`);
-    }
-  } else {
-    // === LINE-BASED context
-    const lines = fullText.split('\n');
-    const regex = exactMatch
-      ? new RegExp(`\\b(${safeQuery})\\b`, 'gi')
-      : new RegExp(`(${safeQuery})`, 'gi');
+  const pageMatch = fullText.lastIndexOf("[PAGE ", match.index);
+const pageLabel = fullText.substring(pageMatch, fullText.indexOf("\n", pageMatch));
 
-    for (let i = 0; i < lines.length; i++) {
-      if (regex.test(lines[i])) {
-        const start = Math.max(0, i - contextLines);
-        const end = Math.min(lines.length - 1, i + contextLines);
-        const snippetText = lines.slice(start, end + 1).join('<br>');
-        const highlighted = snippetText.replace(regex, `<span class='highlight'>$1</span>`);
+  snippets.push(`<div class='snippet'><strong>${pageLabel}</strong><br>${before}<span class='highlight'>${keyword}</span>${after}</div>`);
+}
 
-        const charIndex = lines.slice(0, i).join('\n').length;
-        const pageMatch = fullText.lastIndexOf("[PAGE ", charIndex);
-        const pageLabel = fullText.substring(pageMatch, fullText.indexOf("\n", pageMatch));
-
-        snippets.push(`<div class='snippet'><strong>${pageLabel}</strong><br>${highlighted}</div>`);
-      }
-    }
-  }
 
   if (snippets.length === 0) {
     results.innerHTML = "<p>No results found.</p>";
