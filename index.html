@@ -30,10 +30,11 @@
   <h1>InstantPDFSearch 📄🔍</h1>
   <div class="uploader">
 <input type="file" id="pdfFile" accept="application/pdf" onchange="document.getElementById('pdfUrl').value = '';" />
-      <input type="text" id="pdfUrl"
+     <input type="text" id="pdfUrl"
        placeholder="Paste PDF URL here..."
        pattern="https?://.*\.(pdf|ashx)"
-       title="Must start with http:// or https:// and end with .pdf or .ashx" />
+       title="Must start with http:// or https:// and end with .pdf or .ashx"
+       oninput="document.getElementById('pdfFile').value = '';" />
     <button onclick="handlePDF()">🚀 Scan PDF</button>
     <div class="status" id="status"></div>
   </div>
