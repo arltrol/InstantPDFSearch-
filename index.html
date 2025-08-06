@@ -42,6 +42,11 @@
   <div id="searchArea" style="display:none;">
     <input type="text" id="searchInput" placeholder="Enter keyword to search..." oninput="searchInText()" />
   </div>
+  <label>
+  <input type="checkbox" id="exactMatch" onchange="searchInText()" />
+  Match exact words only
+</label>
+
   <div id="contextSliderWrapper" style="display: none; margin: 1rem auto; text-align: center;">
 <label for="contextSlider"><strong>Expand context (lines):</strong></label>
  <input type="range" id="contextSlider" min="0" max="20" value="0" step="1" oninput="updateContextLines(this.value)">
@@ -163,9 +168,9 @@ if (url && !isValidPdfUrl) {
     
  function searchInText() {
   const query = document.getElementById('searchInput').value.trim();
+  const exactMatch = document.getElementById('exactMatch').checked;
   const results = document.getElementById('results');
   const sliderWrapper = document.getElementById('contextSliderWrapper');
-
   results.innerHTML = '';
 
   if (!query) {
@@ -176,11 +181,15 @@ if (url && !isValidPdfUrl) {
   sliderWrapper.style.display = 'block';
   document.getElementById('contextValue').textContent = contextLines;
 
+  const safeQuery = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // escape regex characters
   const snippets = [];
 
   if (contextLines === 0) {
-    // === DEFAULT BEHAVIOR: character-based preview
-    const regex = new RegExp(`(.{0,80})(${query})(.{0,80})`, 'gi');
+    // === DEFAULT: character-based context
+    const regex = exactMatch
+      ? new RegExp(`(.{0,80})\\b(${safeQuery})\\b(.{0,80})`, 'gi')
+      : new RegExp(`(.{0,80})(${safeQuery})(.{0,80})`, 'gi');
+
     let match;
     while ((match = regex.exec(fullText)) !== null) {
       const before = match[1];
@@ -193,18 +202,21 @@ if (url && !isValidPdfUrl) {
       snippets.push(`<div class='snippet'><strong>${pageLabel}</strong><br>${before}<span class='highlight'>${keyword}</span>${after}</div>`);
     }
   } else {
-    // === LINE-BASED CONTEXT EXPANSION
+    // === LINE-BASED CONTEXT
     const lines = fullText.split('\n');
 
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
-      if (line.toLowerCase().includes(query.toLowerCase())) {
+      const matchLine = exactMatch
+        ? new RegExp(`\\b${safeQuery}\\b`, 'i').test(line)
+        : new RegExp(`${safeQuery}`, 'i').test(line);
+
+      if (matchLine) {
         const start = Math.max(0, i - contextLines);
         const end = Math.min(lines.length - 1, i + contextLines);
-
         const snippetText = lines.slice(start, end + 1).join('<br>');
         const highlighted = snippetText.replace(
-          new RegExp(`(${query})`, 'gi'),
+          new RegExp(`(${safeQuery})`, exactMatch ? 'gi' : 'gi'),
           `<span class='highlight'>$1</span>`
         );
 
@@ -216,6 +228,15 @@ if (url && !isValidPdfUrl) {
       }
     }
   }
+
+  if (snippets.length === 0) {
+    results.innerHTML = "<p>No results found.</p>";
+    sliderWrapper.style.display = 'none';
+  } else {
+    results.innerHTML = `<p>🔍 Found ${snippets.length} match(es):</p>` + snippets.join('');
+  }
+}
+
 
   if (snippets.length === 0) {
     results.innerHTML = "<p>No results found.</p>";
