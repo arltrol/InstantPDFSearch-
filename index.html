@@ -42,17 +42,17 @@
   <div id="searchArea" style="display:none;">
     <input type="text" id="searchInput" placeholder="Enter keyword to search..." oninput="searchInText()" />
   </div>
-  <label>
-  <input type="checkbox" id="exactMatch" onchange="searchInText()" />
-  Match exact words only
-</label>
 
-  <div id="contextSliderWrapper" style="display: none; margin: 1rem auto; text-align: center;">
-<label for="contextSlider"><strong>Expand context (lines):</strong></label>
- <input type="range" id="contextSlider" min="0" max="20" value="0" step="1" oninput="updateContextLines(this.value)">
-<span id="contextValue">0</span> lines
+ <div id="contextSliderWrapper" style="display: none; margin: 1rem auto; text-align: center;">
+  <label for="contextSlider"><strong>Expand context (lines):</strong></label>
+  <input type="range" id="contextSlider" min="0" max="20" value="0" step="1" oninput="updateContextLines(this.value)">
+  <span id="contextValue">0</span> lines
 
+  <span id="exactMatchWrapper" style="display:none; margin-left: 2rem;">
+    <label><input type="checkbox" id="exactMatch" onchange="searchInText()" /> Match exact words only</label>
+  </span>
 </div>
+
 
   <div class="results" id="results"></div>
 
@@ -166,26 +166,31 @@ if (url && !isValidPdfUrl) {
   const defaultContextChars = 80; // matches original behavior
 
     
- function searchInText() {
+function searchInText() {
   const query = document.getElementById('searchInput').value.trim();
-  const exactMatch = document.getElementById('exactMatch').checked;
   const results = document.getElementById('results');
   const sliderWrapper = document.getElementById('contextSliderWrapper');
+  const exactMatchBox = document.getElementById('exactMatchWrapper');
+
   results.innerHTML = '';
 
   if (!query) {
     sliderWrapper.style.display = 'none';
+    exactMatchBox.style.display = 'none';
     return;
   }
 
   sliderWrapper.style.display = 'block';
+  exactMatchBox.style.display = 'inline-block';
   document.getElementById('contextValue').textContent = contextLines;
 
-  const safeQuery = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // escape regex characters
+  const exactMatch = document.getElementById('exactMatch').checked;
+  const safeQuery = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // escape special chars
+
   const snippets = [];
 
   if (contextLines === 0) {
-    // === DEFAULT: character-based context
+    // === DEFAULT: character context
     const regex = exactMatch
       ? new RegExp(`(.{0,80})\\b(${safeQuery})\\b(.{0,80})`, 'gi')
       : new RegExp(`(.{0,80})(${safeQuery})(.{0,80})`, 'gi');
@@ -202,23 +207,18 @@ if (url && !isValidPdfUrl) {
       snippets.push(`<div class='snippet'><strong>${pageLabel}</strong><br>${before}<span class='highlight'>${keyword}</span>${after}</div>`);
     }
   } else {
-    // === LINE-BASED CONTEXT
+    // === LINE-BASED context
     const lines = fullText.split('\n');
+    const regex = exactMatch
+      ? new RegExp(`\\b(${safeQuery})\\b`, 'gi')
+      : new RegExp(`(${safeQuery})`, 'gi');
 
     for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
-      const matchLine = exactMatch
-        ? new RegExp(`\\b${safeQuery}\\b`, 'i').test(line)
-        : new RegExp(`${safeQuery}`, 'i').test(line);
-
-      if (matchLine) {
+      if (regex.test(lines[i])) {
         const start = Math.max(0, i - contextLines);
         const end = Math.min(lines.length - 1, i + contextLines);
         const snippetText = lines.slice(start, end + 1).join('<br>');
-        const highlighted = snippetText.replace(
-          new RegExp(`(${safeQuery})`, exactMatch ? 'gi' : 'gi'),
-          `<span class='highlight'>$1</span>`
-        );
+        const highlighted = snippetText.replace(regex, `<span class='highlight'>$1</span>`);
 
         const charIndex = lines.slice(0, i).join('\n').length;
         const pageMatch = fullText.lastIndexOf("[PAGE ", charIndex);
@@ -232,21 +232,11 @@ if (url && !isValidPdfUrl) {
   if (snippets.length === 0) {
     results.innerHTML = "<p>No results found.</p>";
     sliderWrapper.style.display = 'none';
+    exactMatchBox.style.display = 'none';
   } else {
     results.innerHTML = `<p>🔍 Found ${snippets.length} match(es):</p>` + snippets.join('');
   }
 }
-
-
-  if (snippets.length === 0) {
-    results.innerHTML = "<p>No results found.</p>";
-    sliderWrapper.style.display = 'none';
-  } else {
-    results.innerHTML = `<p>🔍 Found ${snippets.length} match(es):</p>` + snippets.join('');
-  }
-}
-
-
 
   </script>
 </body>
