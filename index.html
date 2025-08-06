@@ -29,7 +29,7 @@
 <body>
   <h1>InstantPDFSearch 📄🔍</h1>
   <div class="uploader">
-    <input type="file" id="pdfFile" accept="application/pdf" />
+<input type="file" id="pdfFile" accept="application/pdf" onchange="document.getElementById('pdfUrl').value = '';" />
       <input type="text" id="pdfUrl"
        placeholder="Paste PDF URL here..."
        pattern="https?://.*\.(pdf|ashx)"
