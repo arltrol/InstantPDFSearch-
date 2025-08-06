@@ -4,6 +4,7 @@
   <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-NV7V8P3B6L"></script>
 <script>
+  
   window.dataLayer = window.dataLayer || [];
   function gtag(){dataLayer.push(arguments);}
   gtag('js', new Date());
@@ -29,7 +30,10 @@
   <h1>InstantPDFSearch 📄🔍</h1>
   <div class="uploader">
     <input type="file" id="pdfFile" accept="application/pdf" />
-    <input type="text" id="pdfUrl" placeholder="Paste PDF URL here..." />
+      <input type="text" id="pdfUrl"
+       placeholder="Paste PDF URL here..."
+       pattern="https?://.*\.(pdf|ashx)"
+       title="Must start with http:// or https:// and end with .pdf or .ashx" />
     <button onclick="handlePDF()">🚀 Scan PDF</button>
     <div class="status" id="status"></div>
   </div>
@@ -50,6 +54,12 @@
   async function handlePDF() {
   const file = document.getElementById('pdfFile').files[0];
   const url = document.getElementById('pdfUrl').value.trim();
+  const isValidPdfUrl = /^https?:\/\/.+\.(pdf|ashx)$/i.test(url);
+if (url && !isValidPdfUrl) {
+  alert("Please enter a valid URL ending in .pdf or .ashx");
+  return;
+}
+
   const status = document.getElementById('status');
   const results = document.getElementById('results');
   results.innerHTML = '';
