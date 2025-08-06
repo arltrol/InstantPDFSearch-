@@ -45,8 +45,8 @@
 
  <div id="contextSliderWrapper" style="display: none; margin: 1rem auto; text-align: center;">
   <label for="contextSlider"><strong>Expand context (characters):</strong></label>
- <input type="range" id="contextSlider" min="0" max="400" step="80" value="0" oninput="updateContextChars(this.value)">
-<span id="contextValue">0</span> characters
+<input type="range" id="contextSlider" min="0" max="400" step="80" value="80" oninput="updateContextChars(this.value)">
+<span id="contextValue">80 characters</span>
 
 
   <span id="exactMatchWrapper" style="display:none; margin-left: 2rem;">
@@ -67,9 +67,10 @@
     }
 
 function updateContextChars(value) {
-  document.getElementById("contextValue").textContent = value;
+  document.getElementById("contextValue").textContent = value + " characters";
   searchInText();
 }
+
 
 
   async function handlePDF() {
@@ -163,7 +164,6 @@ if (url && !isValidPdfUrl) {
       log("Extracted text:", fullText.substring(0, 300));
     }
 
-  let contextLines = 0; // slider starts at 0
   const defaultContextChars = 80; // matches original behavior
 
     
@@ -183,7 +183,7 @@ function searchInText() {
 
   sliderWrapper.style.display = 'block';
   exactMatchBox.style.display = 'inline-block';
-  document.getElementById('contextValue').textContent = contextLines;
+document.getElementById('contextValue').textContent = document.getElementById("contextSlider").value + " characters";
 
   const exactMatch = document.getElementById('exactMatch').checked;
   const safeQuery = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // escape special chars
