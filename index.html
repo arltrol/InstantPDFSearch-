@@ -177,42 +177,44 @@ if (url && !isValidPdfUrl) {
   document.getElementById('contextValue').textContent = contextLines;
 
   const snippets = [];
-  const lines = fullText.split('\n');
 
-  const regex = new RegExp(`(.{0,80})(${query})(.{0,80})`, 'gi');
-  let match;
+  if (contextLines === 0) {
+    // === DEFAULT BEHAVIOR: character-based preview
+    const regex = new RegExp(`(.{0,80})(${query})(.{0,80})`, 'gi');
+    let match;
+    while ((match = regex.exec(fullText)) !== null) {
+      const before = match[1];
+      const keyword = match[2];
+      const after = match[3];
 
-  while ((match = regex.exec(fullText)) !== null) {
-    const matchText = match[0];
-    const matchIndex = match.index;
+      const pageMatch = fullText.lastIndexOf("[PAGE ", match.index);
+      const pageLabel = fullText.substring(pageMatch, fullText.indexOf("\n", pageMatch));
 
-    // Find which line the match is on
-    let charCount = 0;
-    let lineIndex = -1;
+      snippets.push(`<div class='snippet'><strong>${pageLabel}</strong><br>${before}<span class='highlight'>${keyword}</span>${after}</div>`);
+    }
+  } else {
+    // === LINE-BASED CONTEXT EXPANSION
+    const lines = fullText.split('\n');
 
     for (let i = 0; i < lines.length; i++) {
-      charCount += lines[i].length + 1; // +1 for '\n'
-      if (charCount > matchIndex) {
-        lineIndex = i;
-        break;
+      const line = lines[i];
+      if (line.toLowerCase().includes(query.toLowerCase())) {
+        const start = Math.max(0, i - contextLines);
+        const end = Math.min(lines.length - 1, i + contextLines);
+
+        const snippetText = lines.slice(start, end + 1).join('<br>');
+        const highlighted = snippetText.replace(
+          new RegExp(`(${query})`, 'gi'),
+          `<span class='highlight'>$1</span>`
+        );
+
+        const charIndex = lines.slice(0, i).join('\n').length;
+        const pageMatch = fullText.lastIndexOf("[PAGE ", charIndex);
+        const pageLabel = fullText.substring(pageMatch, fullText.indexOf("\n", pageMatch));
+
+        snippets.push(`<div class='snippet'><strong>${pageLabel}</strong><br>${highlighted}</div>`);
       }
     }
-
-    if (lineIndex === -1) continue;
-
-    const start = Math.max(0, lineIndex - contextLines);
-    const end = Math.min(lines.length - 1, lineIndex + contextLines);
-
-    const snippetText = lines.slice(start, end + 1).join('<br>');
-    const highlighted = snippetText.replace(
-      new RegExp(`(${query})`, 'gi'),
-      `<span class='highlight'>$1</span>`
-    );
-
-    const pageMatch = fullText.lastIndexOf("[PAGE ", matchIndex);
-    const pageLabel = fullText.substring(pageMatch, fullText.indexOf("\n", pageMatch));
-
-    snippets.push(`<div class='snippet'><strong>${pageLabel}</strong><br>${highlighted}</div>`);
   }
 
   if (snippets.length === 0) {
@@ -222,6 +224,7 @@ if (url && !isValidPdfUrl) {
     results.innerHTML = `<p>🔍 Found ${snippets.length} match(es):</p>` + snippets.join('');
   }
 }
+
 
 
   </script>
