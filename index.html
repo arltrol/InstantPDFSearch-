@@ -44,8 +44,9 @@
   </div>
   <div id="contextSliderWrapper" style="display: none; margin: 1rem auto; text-align: center;">
 <label for="contextSlider"><strong>Expand context (lines):</strong></label>
-  <input type="range" id="contextSlider" min="0" max="50" value="5" step="5" oninput="updateContextLines(this.value)">
-  <span id="contextValue">5</span> lines
+ <input type="range" id="contextSlider" min="0" max="20" value="0" step="1" oninput="updateContextLines(this.value)">
+<span id="contextValue">0</span> lines
+
 </div>
 
   <div class="results" id="results"></div>
@@ -173,44 +174,45 @@ if (url && !isValidPdfUrl) {
   }
 
   sliderWrapper.style.display = 'block';
+  document.getElementById('contextValue').textContent = contextLines;
+
   const snippets = [];
+  const lines = fullText.split('\n');
 
-  if (contextLines === 0) {
-    // === Default: character-based preview (like original)
-    const regex = new RegExp(`(.{0,${defaultContextChars}})(${query})(.{0,${defaultContextChars}})`, 'gi');
-    let match;
-    while ((match = regex.exec(fullText)) !== null) {
-      const before = match[1];
-      const keyword = match[2];
-      const after = match[3];
+  const regex = new RegExp(`(.{0,80})(${query})(.{0,80})`, 'gi');
+  let match;
 
-      const pageMatch = fullText.lastIndexOf("[PAGE ", match.index);
-      const pageLabel = fullText.substring(pageMatch, fullText.indexOf("\n", pageMatch));
+  while ((match = regex.exec(fullText)) !== null) {
+    const matchText = match[0];
+    const matchIndex = match.index;
 
-      snippets.push(`<div class='snippet'><strong>${pageLabel}</strong><br>${before}<span class='highlight'>${keyword}</span>${after}</div>`);
-    }
-  } else {
-    // === Expanded: line-based preview
-    const lines = fullText.split('\n');
+    // Find which line the match is on
+    let charCount = 0;
+    let lineIndex = -1;
 
     for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
-      if (line.toLowerCase().includes(query.toLowerCase())) {
-        const start = Math.max(0, i - contextLines);
-        const end = Math.min(lines.length - 1, i + contextLines);
-        const snippetLines = lines.slice(start, end + 1).join('<br>');
-
-        const highlighted = snippetLines.replace(
-          new RegExp(`(${query})`, 'gi'),
-          `<span class='highlight'>$1</span>`
-        );
-
-        const pageMatch = fullText.lastIndexOf("[PAGE ", fullText.indexOf(line));
-        const pageLabel = fullText.substring(pageMatch, fullText.indexOf("\n", pageMatch));
-
-        snippets.push(`<div class='snippet'><strong>${pageLabel}</strong><br>${highlighted}</div>`);
+      charCount += lines[i].length + 1; // +1 for '\n'
+      if (charCount > matchIndex) {
+        lineIndex = i;
+        break;
       }
     }
+
+    if (lineIndex === -1) continue;
+
+    const start = Math.max(0, lineIndex - contextLines);
+    const end = Math.min(lines.length - 1, lineIndex + contextLines);
+
+    const snippetText = lines.slice(start, end + 1).join('<br>');
+    const highlighted = snippetText.replace(
+      new RegExp(`(${query})`, 'gi'),
+      `<span class='highlight'>$1</span>`
+    );
+
+    const pageMatch = fullText.lastIndexOf("[PAGE ", matchIndex);
+    const pageLabel = fullText.substring(pageMatch, fullText.indexOf("\n", pageMatch));
+
+    snippets.push(`<div class='snippet'><strong>${pageLabel}</strong><br>${highlighted}</div>`);
   }
 
   if (snippets.length === 0) {
