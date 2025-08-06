@@ -42,16 +42,29 @@
   <div id="searchArea" style="display:none;">
     <input type="text" id="searchInput" placeholder="Enter keyword to search..." oninput="searchInText()" />
   </div>
+  <div id="contextSliderWrapper" style="display: none; margin: 1rem auto; text-align: center;">
+  <label for="contextSlider"><strong>Context lines:</strong></label>
+  <input type="range" id="contextSlider" min="0" max="50" value="5" step="5" oninput="updateContextLines(this.value)">
+  <span id="contextValue">5</span> lines
+</div>
+
   <div class="results" id="results"></div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <script>
+    let contextLines = 5;
     const ENABLE_LOGGING = true; // 👁️ Set to false to disable logging
     let fullText = "";
 
     function log(...args) {
       if (ENABLE_LOGGING) console.log(...args);
     }
+
+  function updateContextLines(value) {
+  contextLines = parseInt(value, 10);
+  document.getElementById("contextValue").textContent = contextLines;
+  searchInText(); // re-render with new context
+}
 
   async function handlePDF() {
   const file = document.getElementById('pdfFile').files[0];
@@ -144,32 +157,49 @@ if (url && !isValidPdfUrl) {
       log("Extracted text:", fullText.substring(0, 300));
     }
 
-    function searchInText() {
-      const query = document.getElementById('searchInput').value.trim();
-      const results = document.getElementById('results');
-      results.innerHTML = '';
-      if (!query) return;
+  function searchInText() {
+  const query = document.getElementById('searchInput').value.trim();
+  const results = document.getElementById('results');
+  const sliderWrapper = document.getElementById('contextSliderWrapper');
 
-      const regex = new RegExp(`(.{0,80})(${query})(.{0,80})`, 'gi');
-      let match;
-      const snippets = [];
+  results.innerHTML = '';
 
-      while ((match = regex.exec(fullText)) !== null) {
-        const before = match[1];
-        const keyword = match[2];
-        const after = match[3];
-        const pageMatch = fullText.lastIndexOf("[PAGE ", match.index);
-        const pageLabel = fullText.substring(pageMatch, fullText.indexOf("\n", pageMatch));
+  if (!query) {
+    sliderWrapper.style.display = 'none'; // hide slider if input is empty
+    return;
+  }
 
-        snippets.push(`<div class='snippet'><strong>${pageLabel}</strong><br>${before}<span class='highlight'>${keyword}</span>${after}</div>`);
-      }
+  const lines = fullText.split('\n');
+  const snippets = [];
 
-      if (snippets.length === 0) {
-        results.innerHTML = "<p>No results found.</p>";
-      } else {
-        results.innerHTML = `<p>🔍 Found ${snippets.length} match(es):</p>` + snippets.join('');
-      }
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (line.toLowerCase().includes(query.toLowerCase())) {
+      const start = Math.max(0, i - contextLines);
+      const end = Math.min(lines.length - 1, i + contextLines);
+
+      const snippetLines = lines.slice(start, end + 1).join(' ');
+      const highlighted = snippetLines.replace(
+        new RegExp(`(${query})`, 'gi'),
+        `<span class='highlight'>$1</span>`
+      );
+
+      const pageMatch = fullText.lastIndexOf("[PAGE ", fullText.indexOf(line));
+      const pageLabel = fullText.substring(pageMatch, fullText.indexOf("\n", pageMatch));
+
+      snippets.push(`<div class='snippet'><strong>${pageLabel}</strong><br>${highlighted}</div>`);
     }
+  }
+
+  if (snippets.length === 0) {
+    results.innerHTML = "<p>No results found.</p>";
+    sliderWrapper.style.display = 'none';
+  } else {
+    results.innerHTML = `<p>🔍 Found ${snippets.length} match(es):</p>` + snippets.join('');
+    sliderWrapper.style.display = 'block';
+  }
+}
+
   </script>
 </body>
 </html>
