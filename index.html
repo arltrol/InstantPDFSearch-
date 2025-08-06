@@ -86,6 +86,14 @@ if (url && !isValidPdfUrl) {
   const results = document.getElementById('results');
   results.innerHTML = '';
   fullText = '';
+    document.getElementById('searchArea').style.display = 'none';
+document.getElementById('contextSliderWrapper').style.display = 'none';
+document.getElementById('exactMatchWrapper').style.display = 'none';
+document.getElementById('searchInput').value = '';
+document.getElementById('exactMatch').checked = false;
+document.getElementById('contextSlider').value = 80;
+document.getElementById('contextValue').textContent = '80 characters';
+
   status.textContent = '📥 Loading PDF...';
 
   try {
