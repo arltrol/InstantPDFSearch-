@@ -178,7 +178,7 @@ if (url && !isValidPdfUrl) {
       const start = Math.max(0, i - contextLines);
       const end = Math.min(lines.length - 1, i + contextLines);
 
-      const snippetLines = lines.slice(start, end + 1).join(' ');
+const snippetLines = lines.slice(start, end + 1).join('<br>');
       const highlighted = snippetLines.replace(
         new RegExp(`(${query})`, 'gi'),
         `<span class='highlight'>$1</span>`
